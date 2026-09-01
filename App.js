@@ -9,12 +9,23 @@
 // Alert: componente usado para mostrar alertas na tela.
 // FlatList: componente usado para renderizar listas de dados de forma eficiente, renderizando apenas os itens visíveis na tela.
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View, SafeAreaView, FlatList, Button, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import { StyleSheet, Text, View, FlatList, Button, ScrollView, TouchableOpacity, Alert, TextInput } from 'react-native';
+import { SafeAreaProvider, SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useState, useEffect } from 'react';
 import { Cabecalho, Linha, CabecalhoConfig, LinhaConfig, dadosIniciais, stylesTabelas } from './src/tabelas/dados.js';
 import { supabase } from './src/supabase/supabaseClient.js';
 
-export default function App() {
+// Toda a lógica e a tela do app moraram aqui dentro, na função
+// ConteudoApp. Ela deixou de ser "export default" porque agora
+// precisa ficar DENTRO do SafeAreaProvider (declarado mais abaixo)
+// para o hook useSafeAreaInsets funcionar.
+function ConteudoApp() {
+  // insets.bottom é a altura, em pixels, que a barra de navegação do
+  // Android (ou a "faixa" do iPhone) ocupa na parte de baixo da tela.
+  // Vamos usar esse valor para dar um respiro extra no final do
+  // conteúdo, para os botões não ficarem escondidos atrás dela.
+  const insets = useSafeAreaInsets();
+
   // O estoque agora começa vazio ([]) e é preenchido pela função buscarEstoque(),
   // que busca os dados reais no Supabase assim que o app abre (veja o useEffect logo abaixo).
   // Isso substitui o antigo "useState(dadosIniciais)", que sempre reiniciava os valores.
@@ -37,6 +48,13 @@ export default function App() {
   // de novo preço (ainda não salvo no banco).
   const [precosEditados, setPrecosEditados] = useState({});
   const [salvandoEstoque, setSalvandoEstoque] = useState(false);
+
+  // NOVO: estados do formulário "Adicionar novo produto" (também na
+  // tela de configuração de estoque).
+  const [novoNome, setNovoNome] = useState('');
+  const [novoQuantidade, setNovoQuantidade] = useState('');
+  const [novoPreco, setNovoPreco] = useState('');
+  const [adicionandoProduto, setAdicionandoProduto] = useState(false);
 
   // Busca o estoque no Supabase e coloca no estado "estoque".
   // Também usa esses mesmos dados para montar o "vendasDia" zerado,
@@ -265,56 +283,7 @@ export default function App() {
     return soma + item.quantidadeVendida;
   }, 0);
 
-  const totalVendasBolinho = vendasDia.filter(function (item) {
-    return item.nome.toLowerCase().includes("bolinho");
-  })
-  .reduce(function (soma, item) {
-    return soma + item.quantidadeVendida;
-  }, 0);
-
-  const totalVendasCoxinha = vendasDia.filter(function (item) {
-    return item.nome.toLowerCase().includes("coxinha");
-  })
-  .reduce(function (soma, item) {
-    return soma + item.quantidadeVendida;
-  }, 0);
-
-  const totalVendasRisoles = vendasDia.filter(function (item) {
-    return item.nome.toLowerCase().includes("risoles");
-  })
-  .reduce(function (soma, item) {
-    return soma + item.quantidadeVendida;
-  }, 0);
-
-  const totalVendasEnroladinho = vendasDia.filter(function (item) {
-    return item.nome.toLowerCase().includes("enroladinho");
-  })
-  .reduce(function (soma, item) {
-    return soma + item.quantidadeVendida;
-  }, 0);
-
-  const totalVendasAssado = vendasDia.filter(function (item) {
-    return item.nome.toLowerCase().includes("assado");
-  })
-  .reduce(function (soma, item) {
-    return soma + item.quantidadeVendida;
-  }, 0);
-
-  const totalVendasPaoQueijo = vendasDia.filter(function (item) {
-    return item.nome.toLowerCase().includes("pão de queijo");
-  })
-  .reduce(function (soma, item) {
-    return soma + item.quantidadeVendida;
-  }, 0);
-
-  const totalVendasRefrigerante = vendasDia.filter(function (item) {
-    return item.nome.toLowerCase().includes("refrigerante");
-  })
-  .reduce(function (soma, item) {
-    return soma + item.quantidadeVendida;
-  }, 0);
-
-  const totalVendas = totalVendasPasteis + totalVendasCaldoCana + totalVendasBolinho + totalVendasCoxinha + totalVendasRisoles + totalVendasEnroladinho + totalVendasAssado + totalVendasPaoQueijo + totalVendasRefrigerante;
+  const totalVendas = totalVendasPasteis + totalVendasCaldoCana;
 
   let total = 0;
   for (const item of estoque) {
@@ -479,8 +448,68 @@ function venderSelecionados() {
     Alert.alert('Estoque atualizado', 'As alterações foram salvas com sucesso.');
   }
 
+  // Adiciona um produto novo (que ainda não existe no estoque) direto no
+  // Supabase, e depois recarrega o estoque para ele aparecer nas tabelas.
+  async function adicionarNovoProduto() {
+    const nomeTratado = novoNome.trim();
+
+    if (nomeTratado === '') {
+      Alert.alert('Nome obrigatório', 'Digite o nome do novo produto.');
+      return;
+    }
+
+    // Impede cadastrar dois produtos com o mesmo nome (comparação sem
+    // diferenciar maiúsculas/minúsculas, já que o resto do app também
+    // compara nomes em minúsculo, ex: .toLowerCase().includes(...)).
+    const jaExiste = estoque.some(function (item) {
+      return item.nome.toLowerCase() === nomeTratado.toLowerCase();
+    });
+
+    if (jaExiste) {
+      Alert.alert('Produto já existe', 'Já existe um produto com esse nome.');
+      return;
+    }
+
+    // parseInt/parseFloat podem devolver NaN se o campo estiver vazio ou
+    // com texto inválido — nesse caso, assumimos 0.
+    const quantidadeConvertida = parseInt(novoQuantidade, 10);
+    const quantidadeInicial = isNaN(quantidadeConvertida) ? 0 : quantidadeConvertida;
+
+    const precoConvertido = parseFloat(novoPreco.replace(',', '.'));
+    const precoInicial = isNaN(precoConvertido) ? 0 : precoConvertido;
+
+    // Como a tabela "produtos" não gera id automaticamente (usamos ids
+    // fixos desde o começo, 1 a 12), calculamos aqui o próximo id livre:
+    // o maior id que já existe no estoque, mais 1.
+    const proximoId = estoque.length > 0
+      ? Math.max.apply(null, estoque.map(function (item) { return item.id; })) + 1
+      : 1;
+
+    setAdicionandoProduto(true);
+
+    const { error } = await supabase
+      .from('produtos')
+      .insert({ id: proximoId, nome: nomeTratado, quantidade: quantidadeInicial, lucro: precoInicial });
+
+    if (error) {
+      console.log('erro ao adicionar produto: ', error.message);
+      Alert.alert('Erro ao adicionar produto', error.message);
+      setAdicionandoProduto(false);
+      return;
+    }
+
+    await buscarEstoque();
+
+    setNovoNome('');
+    setNovoQuantidade('');
+    setNovoPreco('');
+    setAdicionandoProduto(false);
+
+    Alert.alert('Produto adicionado', `"${nomeTratado}" foi adicionado ao estoque.`);
+  }
+
   return (
-    <ScrollView>
+    <ScrollView contentContainerStyle={{ paddingBottom: insets.bottom + 24 }}>
       <SafeAreaView style={stylesTabelas.container}>
 
         {tela === 'principal' && (
@@ -515,13 +544,6 @@ function venderSelecionados() {
               <Text style={stylesTabelas.textoRelatorio}> total vendas: {totalVendas} </Text>
               <Text style={stylesTabelas.textoRelatorio}> total vendas pasteis: {totalVendasPasteis} </Text>
               <Text style={stylesTabelas.textoRelatorio}> total vendas caldo de cana: {totalVendasCaldoCana} </Text>
-              <Text style={stylesTabelas.textoRelatorio}> total vendas bolinho: {totalVendasBolinho} </Text>
-              <Text style={stylesTabelas.textoRelatorio}> total vendas coxinha: {totalVendasCoxinha} </Text>
-              <Text style={stylesTabelas.textoRelatorio}> total vendas risoles: {totalVendasRisoles} </Text>
-              <Text style={stylesTabelas.textoRelatorio}> total vendas enroladinho: {totalVendasEnroladinho} </Text>
-              <Text style={stylesTabelas.textoRelatorio}> total vendas assado: {totalVendasAssado} </Text>
-              <Text style={stylesTabelas.textoRelatorio}> total vendas pão de queijo: {totalVendasPaoQueijo} </Text>
-              <Text style={stylesTabelas.textoRelatorio}> total vendas refrigerante: {totalVendasRefrigerante} </Text>
               <Text style={stylesTabelas.textoRelatorio}> lucro: R$ {lucro.toFixed(2)} </Text>
               
               <View style={stylesTabelas.tabelaContainer}>
@@ -605,6 +627,44 @@ function venderSelecionados() {
                 <Text style={stylesTabelas.textoBotao}> Voltar </Text>
               </TouchableOpacity>
             </View>
+
+            {/* NOVO: formulário para cadastrar um produto que ainda não existe no estoque. */}
+            <View style={stylesTabelas.formNovoProduto}>
+              <Text style={stylesTabelas.tituloFormNovoProduto}>Adicionar novo produto</Text>
+
+              <TextInput
+                style={stylesTabelas.inputNovoProduto}
+                placeholder="Nome do produto"
+                value={novoNome}
+                onChangeText={setNovoNome}
+              />
+
+              <TextInput
+                style={stylesTabelas.inputNovoProduto}
+                placeholder="Quantidade inicial"
+                keyboardType="number-pad"
+                value={novoQuantidade}
+                onChangeText={setNovoQuantidade}
+              />
+
+              <TextInput
+                style={stylesTabelas.inputNovoProduto}
+                placeholder="Preço (lucro) por unidade"
+                keyboardType="decimal-pad"
+                value={novoPreco}
+                onChangeText={setNovoPreco}
+              />
+
+              <TouchableOpacity
+                style={[stylesTabelas.botao, adicionandoProduto && stylesTabelas.botaoDesabilitado]}
+                onPress={adicionarNovoProduto}
+                disabled={adicionandoProduto}
+              >
+                <Text style={stylesTabelas.textoBotao}>
+                  {adicionandoProduto ? 'Adicionando...' : 'Adicionar produto'}
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
         )}
 
@@ -663,13 +723,6 @@ function venderSelecionados() {
                   <Text style={stylesTabelas.textoRelatorio}>Total de vendas: {registro.total_vendas}</Text>
                   <Text style={stylesTabelas.textoRelatorio}>Pastéis vendidos: {registro.total_vendas_pasteis}</Text>
                   <Text style={stylesTabelas.textoRelatorio}>Caldo de cana vendido: {registro.total_vendas_caldo_cana}</Text>
-                  <Text style={stylesTabelas.textoRelatorio}>Bolinhos vendidos: {registro.total_vendas_bolinho}</Text>
-                  <Text style={stylesTabelas.textoRelatorio}>Coxinhas vendidas: {registro.total_vendas_coxinha}</Text>
-                  <Text style={stylesTabelas.textoRelatorio}>Risoles vendidos: {registro.total_vendas_risoles}</Text>
-                  <Text style={stylesTabelas.textoRelatorio}>Enroladinhos vendidos: {registro.total_vendas_enroladinho}</Text>
-                  <Text style={stylesTabelas.textoRelatorio}>Assados vendidos: {registro.total_vendas_assado}</Text>
-                  <Text style={stylesTabelas.textoRelatorio}>Pães de queijo vendidos: {registro.total_vendas_pao_queijo}</Text>
-                  <Text style={stylesTabelas.textoRelatorio}>Refrigerantes vendidos: {registro.total_vendas_refrigerante}</Text>
                   <Text style={stylesTabelas.textoRelatorio}>Lucro: R$ {(registro.lucro || 0).toFixed(2)}</Text>
                 </View>
               );
@@ -679,5 +732,18 @@ function venderSelecionados() {
 
       </SafeAreaView>
     </ScrollView>
+  );
+}
+
+// Este é o componente que o Expo realmente carrega. Ele só existe para
+// envolver o ConteudoApp com o SafeAreaProvider — sem isso, o hook
+// useSafeAreaInsets() usado lá dentro não teria de onde pegar os valores
+// de inset (ele lê essa informação através do "contexto" criado pelo
+// Provider, por isso o nome).
+export default function App() {
+  return (
+    <SafeAreaProvider>
+      <ConteudoApp />
+    </SafeAreaProvider>
   );
 }

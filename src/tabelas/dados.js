@@ -46,39 +46,8 @@ export const dadosIniciais = [
 
   {
     id: 12, nome: "refrigerante 2L", quantidade: 7, lucro: 14.00
-  },
-
-  {
-    id: 13, nome: "bolinho de carne", quantidade: 20, lucro: 8.00
-  },
-
-  {
-    id: 14, nome: "enroladinho de salsicha", quantidade: 14, lucro: 8.00
-  },
-
-  {
-    id: 15, nome: "risoles", quantidade: 10, lucro: 8.00
-  },
-
-  {
-    id: 16, nome: "coxinha de carne", quantidade: 10, lucro: 8.00
-  },
-
-  {
-    id: 17, nome: "coxinha de frango", quantidade: 10, lucro: 8.00
-  },
-
-  {
-    id: 18, nome: "bolinho de frango", quantidade: 10, lucro: 8.00
-  },
-
-  {
-    id: 19, nome: "assado", quantidade: 10, lucro: 10.00
-  },
-
-  {
-    id: 20, nome: "pão de queijo", quantidade: 10, lucro: 8.00
   }
+
 ];
 
 // estrutura padrão para cada linha das tabelas renderizdas, ademais funções de seleção e alteração de quantidade.
@@ -477,6 +446,35 @@ export const stylesTabelas = StyleSheet.create({
     fontSize: 13,
     textAlign: 'center',
     marginLeft: 6,
+  },
+
+  // NOVO: estilos do formulário "Adicionar novo produto", também na
+  // tela de configuração de estoque.
+  formNovoProduto: {
+    width: '90%',
+    alignSelf: 'center',
+    marginTop: 20,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+  },
+
+  tituloFormNovoProduto: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+
+  inputNovoProduto: {
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 6,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    fontSize: 14,
+    marginBottom: 10,
   },
 
 });
