@@ -16,20 +16,10 @@ import { Cabecalho, Linha, CabecalhoConfig, LinhaConfig, dadosIniciais, stylesTa
 import { supabase } from './src/supabase/supabaseClient.js';
 import CheckBox from 'expo-checkbox';
 
-// Toda a lógica e a tela do app moraram aqui dentro, na função
-// ConteudoApp. Ela deixou de ser "export default" porque agora
-// precisa ficar DENTRO do SafeAreaProvider (declarado mais abaixo)
-// para o hook useSafeAreaInsets funcionar.
 function ConteudoApp() {
-  // insets.bottom é a altura, em pixels, que a barra de navegação do
-  // Android (ou a "faixa" do iPhone) ocupa na parte de baixo da tela.
-  // Vamos usar esse valor para dar um respiro extra no final do
-  // conteúdo, para os botões não ficarem escondidos atrás dela.
+
   const insets = useSafeAreaInsets();
 
-  // O estoque agora começa vazio ([]) e é preenchido pela função buscarEstoque(),
-  // que busca os dados reais no Supabase assim que o app abre (veja o useEffect logo abaixo).
-  // Isso substitui o antigo "useState(dadosIniciais)", que sempre reiniciava os valores.
   const [estoque, setEstoque] = useState([]);
   const [vendasDia, setVendasDia] = useState([]);
   const [quantidades, setQuantidades] = useState({});
@@ -41,34 +31,22 @@ function ConteudoApp() {
   const [carregandoRegistros, setCarregandoRegistros] = useState(false);
   const [pedidosDia, setPedidosDia] = useState([]);
 
-  // NOVO: estados exclusivos da tela "Configurar Estoque".
-  // quantidadesReposicao guarda, por id de produto, quanto o usuário
-  // marcou para ADICIONAR ao estoque (ainda não salvo no banco).
   const [quantidadesReposicao, setQuantidadesReposicao] = useState({});
-  // precosEditados guarda, por id de produto, o texto digitado no campo
-  // de novo preço (ainda não salvo no banco).
+
   const [precosEditados, setPrecosEditados] = useState({});
   const [salvandoEstoque, setSalvandoEstoque] = useState(false);
 
-  // NOVO: estados do formulário "Adicionar novo produto" (também na
-  // tela de configuração de estoque).
   const [novoNome, setNovoNome] = useState('');
   const [novoQuantidade, setNovoQuantidade] = useState('');
   const [novoPreco, setNovoPreco] = useState('');
   const [adicionandoProduto, setAdicionandoProduto] = useState(false);
 
-  // NOVO: estados da seção "Calcular totais" (também na tela de
-  // configuração de estoque). gruposVenda é a lista já salva no Supabase
-  // (cada item é { id, nome, produtos_ids }). Os outros três são o
-  // "rascunho" do formulário para criar um total novo.
+
   const [gruposVenda, setGruposVenda] = useState([]);
   const [novoGrupoNome, setNovoGrupoNome] = useState('');
   const [novoGrupoProdutosSelecionados, setNovoGrupoProdutosSelecionados] = useState([]);
   const [salvandoGrupo, setSalvandoGrupo] = useState(false);
 
-  // Busca o estoque no Supabase e coloca no estado "estoque".
-  // Também usa esses mesmos dados para montar o "vendasDia" zerado,
-  // já que antes isso era feito a partir de dadosIniciais.
   async function buscarEstoque() {
     setCarregandoEstoque(true);
 
@@ -81,9 +59,7 @@ function ConteudoApp() {
       console.log('erro ao buscar estoque: ', error.message);
       Alert.alert('Erro ao carregar estoque', error.message);
     } else {
-      // Number(...) garante que quantidade e lucro cheguem como número,
-      // e não como texto (o driver do Supabase às vezes devolve campos
-      // numeric como string).
+
       const estoqueFormatado = data.map(function (item) {
         return {
           id: item.id,
@@ -95,17 +71,6 @@ function ConteudoApp() {
 
       setEstoque(estoqueFormatado);
 
-      // Antes, essa parte só recriava "vendasDia" (zerado) quando o
-      // TAMANHO da lista mudava — mas isso zerava as vendas do dia inteiro
-      // sempre que um produto era adicionado OU removido, mesmo que os
-      // outros produtos já tivessem vendas registradas.
-      //
-      // Agora, em vez de comparar tamanhos, montamos "vendasDia" produto
-      // por produto: se o produto já tinha uma entrada de vendas, mantém
-      // a quantidade vendida que já existia; se é um produto novo (acabou
-      // de ser cadastrado), começa com 0; se um produto foi removido, ele
-      // simplesmente não entra mais na lista (porque estamos percorrendo
-      // "estoqueFormatado", que já não tem mais ele).
       setVendasDia(function (vendasAtual) {
         return estoqueFormatado.map(function (item) {
           const vendaExistente = vendasAtual.find(function (v) { return v.id === item.id; });
@@ -121,8 +86,6 @@ function ConteudoApp() {
     setCarregandoEstoque(false);
   }
 
-  // NOVO: busca a lista de totais personalizados (grupos_venda) no
-  // Supabase, igual buscarEstoque faz com os produtos.
   async function buscarGruposVenda() {
     const { data, error } = await supabase
       .from('grupos_venda')
@@ -136,7 +99,6 @@ function ConteudoApp() {
     }
   }
 
-  // Busca o estoque e os totais personalizados uma única vez, quando o app abre.
   useEffect(function () {
     buscarEstoque();
     buscarGruposVenda();
@@ -174,15 +136,10 @@ function ConteudoApp() {
     return lucroAtual;
   }
 
-  // Agora, além de atualizar o estado local "estoque", essa função também
-  // manda a nova quantidade para o Supabase, para a baixa no estoque
-  // ser permanente (sobreviver a um reinício do app).
   async function estoqueProd(id, quantidade) {
     const itemAtual = estoque.find(function (item) { return item.id === id; });
     const ehCaldoDeCana = itemAtual && itemAtual.nome.toLowerCase().includes("caldo de cana");
 
-    // Calculamos a nova quantidade aqui fora, para podermos usar o mesmo
-    // valor tanto no estado local quanto na atualização do banco.
     let novaQuantidade = itemAtual ? itemAtual.quantidade : 0;
     if (itemAtual && !ehCaldoDeCana) {
       novaQuantidade = itemAtual.quantidade - quantidade;
@@ -208,7 +165,6 @@ function ConteudoApp() {
       return novoEstoque;
     });
 
-    // Se for caldo de cana (estoque "infinito"), não existe o que salvar no banco.
     if (itemAtual && !ehCaldoDeCana) {
       const { error } = await supabase
         .from('produtos')
@@ -283,9 +239,7 @@ function ConteudoApp() {
         const item = vendasAtual[i];
         if (item.id === id) {
           const novaQuantidadeVendida = item.quantidadeVendida + quantidade;
-          // Antes buscava o lucro em "dadosIniciais" (fixo). Agora busca em
-          // "estoque", que reflete o preço atual do produto — importante
-          // porque agora o preço pode ser alterado na tela de configuração.
+
           const produtoOriginal = estoque.find(function (p) {
             return p.id === id;
           });
@@ -318,23 +272,10 @@ function ConteudoApp() {
     return soma + item.quantidadeVendida;
   }, 0);
 
-  // Antes: totalVendas = totalVendasPasteis + totalVendasCaldoCana.
-  // Isso deixava de fora qualquer produto novo que não fosse "pastel" nem
-  // "caldo de cana"/"refri" (ex: risoles). Agora soma TODAS as vendas do
-  // dia, não importa o nome do produto.
   const totalVendas = vendasDia.reduce(function (soma, item) {
     return soma + item.quantidadeVendida;
   }, 0);
 
-  // NOVO: em vez de agrupar automaticamente por palavra, o usuário agora
-  // define manualmente, na tela de configuração de estoque, quais totais
-  // personalizados quer ver (ex: "Coxinha" somando dois produtos
-  // específicos). Esses grupos vêm do estado "gruposVenda" (buscado do
-  // Supabase) e o cálculo em si é feito logo abaixo, em "totaisPersonalizados".
-
-  // Para cada grupo salvo (ex: { nome: "Coxinha", produtos_ids: [13, 14] }),
-  // soma a quantidadeVendida de todos os produtos do dia cujo id esteja
-  // na lista produtos_ids desse grupo.
   const totaisPersonalizados = gruposVenda.map(function (grupo) {
     const quantidade = vendasDia
       .filter(function (item) { return grupo.produtos_ids.includes(item.id); })
@@ -351,8 +292,7 @@ function ConteudoApp() {
   }
 
   useEffect(function () {
-    // Só dispara o alerta depois que o estoque já foi carregado do banco
-    // (senão ele dispararia sempre no primeiro instante, quando estoque = []).
+
     if (!carregandoEstoque && total === 0) {
       Alert.alert('Produtos esgotados', 'Os produtos acabaram, é preciso reabastecer o estoque.');
     }
@@ -418,14 +358,6 @@ function venderSelecionados() {
     setQuantidades({});
   }
 
-  // ==========================================================================
-  // NOVO: funções da tela "Configurar Estoque".
-  // ==========================================================================
-
-  // Chamada ao apertar + ou - no seletor de reposição de um produto.
-  // Igual ao alterarQuantidade, mas guarda o valor em "quantidadesReposicao"
-  // e nunca é bloqueada por estoque zerado (faz sentido repor justamente
-  // quando o estoque está em zero).
   function alterarQuantidadeReposicao(id, delta) {
     setQuantidadesReposicao(function (atual) {
       const atualQuantidade = atual[id] || 0;
@@ -437,19 +369,12 @@ function venderSelecionados() {
     });
   }
 
-  // Chamada a cada caractere digitado no campo de novo preço.
-  // Guardamos o texto "cru" mesmo (ex: "8,50") e só convertemos
-  // para número na hora de salvar, dentro de salvarConfiguracaoEstoque.
   function alterarPrecoEditado(id, texto) {
     setPrecosEditados(function (atual) {
       return { ...atual, [id]: texto };
     });
   }
 
-  // Percorre todos os produtos, calcula a nova quantidade (estoque atual +
-  // quantidade marcada para adicionar) e o novo preço (se foi digitado algo
-  // válido), manda a atualização para o Supabase produto por produto, e
-  // depois recarrega o estoque para refletir os valores confirmados pelo banco.
   async function salvarConfiguracaoEstoque() {
     setSalvandoEstoque(true);
 
@@ -462,7 +387,7 @@ function venderSelecionados() {
 
       let novoPreco = item.lucro;
       if (precoTexto !== undefined && precoTexto.trim() !== '') {
-        // Aceita tanto "8.50" quanto "8,50" (vírgula é comum no Brasil).
+
         const precoConvertido = parseFloat(precoTexto.replace(',', '.'));
         if (!isNaN(precoConvertido)) {
           novoPreco = precoConvertido;
@@ -473,7 +398,6 @@ function venderSelecionados() {
       const precoMudou = novoPreco !== item.lucro;
       const quantidadeMudou = adicionar !== 0;
 
-      // Só manda para o banco os produtos que realmente tiveram alguma alteração.
       if (quantidadeMudou || precoMudou) {
         atualizacoes.push({ id: item.id, quantidade: novaQuantidade, lucro: novoPreco });
       }
@@ -506,8 +430,6 @@ function venderSelecionados() {
     Alert.alert('Estoque atualizado', 'As alterações foram salvas com sucesso.');
   }
 
-  // Adiciona um produto novo (que ainda não existe no estoque) direto no
-  // Supabase, e depois recarrega o estoque para ele aparecer nas tabelas.
   async function adicionarNovoProduto() {
     const nomeTratado = novoNome.trim();
 
@@ -516,9 +438,6 @@ function venderSelecionados() {
       return;
     }
 
-    // Impede cadastrar dois produtos com o mesmo nome (comparação sem
-    // diferenciar maiúsculas/minúsculas, já que o resto do app também
-    // compara nomes em minúsculo, ex: .toLowerCase().includes(...)).
     const jaExiste = estoque.some(function (item) {
       return item.nome.toLowerCase() === nomeTratado.toLowerCase();
     });
@@ -528,17 +447,12 @@ function venderSelecionados() {
       return;
     }
 
-    // parseInt/parseFloat podem devolver NaN se o campo estiver vazio ou
-    // com texto inválido — nesse caso, assumimos 0.
     const quantidadeConvertida = parseInt(novoQuantidade, 10);
     const quantidadeInicial = isNaN(quantidadeConvertida) ? 0 : quantidadeConvertida;
 
     const precoConvertido = parseFloat(novoPreco.replace(',', '.'));
     const precoInicial = isNaN(precoConvertido) ? 0 : precoConvertido;
 
-    // Como a tabela "produtos" não gera id automaticamente (usamos ids
-    // fixos desde o começo, 1 a 12), calculamos aqui o próximo id livre:
-    // o maior id que já existe no estoque, mais 1.
     const proximoId = estoque.length > 0
       ? Math.max.apply(null, estoque.map(function (item) { return item.id; })) + 1
       : 1;
@@ -566,16 +480,6 @@ function venderSelecionados() {
     Alert.alert('Produto adicionado', `"${nomeTratado}" foi adicionado ao estoque.`);
   }
 
-  // Remove um produto definitivamente do estoque (a linha inteira, não só
-  // a quantidade). Pede confirmação antes, porque não tem como desfazer.
-  //
-  // A confirmação precisa ser diferente dependendo da plataforma:
-  // - No Android/iOS de verdade, Alert.alert com dois botões (Cancelar/
-  //   Remover) funciona nativamente e é a forma correta.
-  // - No modo web (o que você está testando agora no navegador),
-  //   react-native-web não sabe desenhar essa caixa com múltiplos botões
-  //   — por isso o clique em "Remover" nunca disparava. Nesse caso usamos
-  //   window.confirm, que é o equivalente do próprio navegador.
   function removerProduto(id, nome) {
     if (Platform.OS === 'web') {
       const confirmado = window.confirm(
@@ -603,8 +507,6 @@ function venderSelecionados() {
     );
   }
 
-  // A exclusão de verdade (chamada tanto pelo caminho nativo quanto pelo
-  // caminho web, depois que a pessoa já confirmou).
   async function executarRemocaoProduto(id) {
     const { error } = await supabase
       .from('produtos')
@@ -617,9 +519,6 @@ function venderSelecionados() {
       return;
     }
 
-    // Limpa qualquer rascunho pendente desse produto nas telas que usam
-    // objetos indexados por id (senão ficaria um "lixo" no estado,
-    // referenciando um id que não existe mais no banco).
     setQuantidadesReposicao(function (atual) {
       const copia = { ...atual };
       delete copia[id];
@@ -639,13 +538,6 @@ function venderSelecionados() {
     await buscarEstoque();
   }
 
-  // ==========================================================================
-  // NOVO: funções da seção "Calcular totais" (totais de venda personalizados).
-  // ==========================================================================
-
-  // Chamada ao marcar/desmarcar o checkbox de um produto no formulário de
-  // criar um novo total. Funciona como um "alternar": se o id já estava na
-  // lista, tira; se não estava, adiciona.
   function alternarProdutoNoNovoGrupo(id) {
     setNovoGrupoProdutosSelecionados(function (atual) {
       if (atual.includes(id)) {
@@ -655,8 +547,6 @@ function venderSelecionados() {
     });
   }
 
-  // Salva um novo total personalizado no Supabase, com o nome digitado e
-  // os produtos marcados no formulário.
   async function salvarNovoGrupoVenda() {
     const nomeTratado = novoGrupoNome.trim();
 
@@ -690,8 +580,6 @@ function venderSelecionados() {
     setSalvandoGrupo(false);
   }
 
-  // Remove um total personalizado. Importante: isso NÃO mexe no estoque
-  // nem nos produtos, só apaga a "regra" de agrupamento salva.
   function removerGrupoVenda(id, nome) {
     if (Platform.OS === 'web') {
       const confirmado = window.confirm(`Remover o total "${nome}"? Isso não afeta o estoque, só o cálculo do total.`);
@@ -762,9 +650,6 @@ function venderSelecionados() {
               <Text style={stylesTabelas.textoRelatorio}> total vendas: {totalVendas} </Text>
               <Text style={stylesTabelas.textoRelatorio}> total vendas pasteis: {totalVendasPasteis} </Text>
               <Text style={stylesTabelas.textoRelatorio}> total vendas caldo de cana: {totalVendasCaldoCana} </Text>
-
-              {/* NOVO: um total de vendas para cada grupo que o usuário
-                  configurou na tela "Configurar estoque" > "Calcular totais". */}
               {totaisPersonalizados.map(function (grupo) {
                 return (
                   <Text key={grupo.id} style={stylesTabelas.textoRelatorio}>
@@ -896,17 +781,12 @@ function venderSelecionados() {
               </TouchableOpacity>
             </View>
 
-            {/* NOVO: seção "Calcular totais" — o usuário escolhe um nome
-                (ex: "Coxinha") e marca quais produtos do estoque entram
-                na soma desse total, que depois aparece no relatório de
-                vendas como "total de vendas <nome>: N". */}
             <View style={stylesTabelas.formNovoProduto}>
               <Text style={stylesTabelas.tituloFormNovoProduto}>Calcular totais</Text>
               <Text style={stylesTabelas.textoRelatorio}>
                 Crie um total personalizado escolhendo um nome e quais produtos entram nele (ex: "Coxinha" somando "coxinha de frango" e "coxinha de carne").
               </Text>
 
-              {/* Lista dos totais que já existem, com botão de remover cada um. */}
               {gruposVenda.length === 0 && (
                 <Text style={stylesTabelas.textoRelatorio}>Nenhum total personalizado criado ainda.</Text>
               )}
@@ -1030,11 +910,6 @@ function venderSelecionados() {
   );
 }
 
-// Este é o componente que o Expo realmente carrega. Ele só existe para
-// envolver o ConteudoApp com o SafeAreaProvider — sem isso, o hook
-// useSafeAreaInsets() usado lá dentro não teria de onde pegar os valores
-// de inset (ele lê essa informação através do "contexto" criado pelo
-// Provider, por isso o nome).
 export default function App() {
   return (
     <SafeAreaProvider>

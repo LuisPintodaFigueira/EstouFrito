@@ -3,11 +3,6 @@
 import { View, Text, StyleSheet, SafeAreaView, Button, onPress, TouchableOpacity, TextInput } from 'react-native';
 import CheckBox from 'expo-checkbox';
 
-// Array com os dados do estoque.
-// A partir de agora esse array NÃO é mais usado para "inicializar" o estoque
-// dentro do app (isso agora vem do Supabase). Ele fica aqui só como registro
-// de quais produtos existem e como "seed" (dado inicial) da tabela do banco,
-// que você já inseriu através do supabase_setup.sql.
 export const dadosIniciais = [
   {
     id: 1, nome: "pastel de carne", quantidade: 9, lucro: 8.00
@@ -159,12 +154,6 @@ export const Cabecalho = ({ tabelaEstoque }) => (
   </View>
 );
 
-// ==========================================================================
-// NOVO: componentes exclusivos da tela "Configurar Estoque".
-// Servem para: mostrar a quantidade atual de cada produto, permitir
-// adicionar (repor) uma quantidade, e editar o preço (lucro) do produto.
-// ==========================================================================
-
 // Cabeçalho da tabela de configuração. Tem 4 colunas: Nome, Estoque atual,
 // Adicionar (o seletor +/-) e Novo preço (o campo de texto).
 export const CabecalhoConfig = () => (
@@ -207,9 +196,6 @@ export const LinhaConfig = ({ item, quantidadeAdicionar, aoAlterarQuantidade, no
         {ehCaldoDeCana ? '∞' : item.quantidade}
       </Text>
 
-      {/* Seletor de reposição. Não faz sentido repor "caldo de cana",
-          já que ele é tratado como infinito no app, então escondemos
-          o seletor pra esse tipo de produto e mostramos um traço. */}
       {ehCaldoDeCana ? (
         <Text style={[stylesTabelas.celulaHeader, stylesTabelas.espacadorSeletor]}>—</Text>
       ) : (
@@ -241,8 +227,6 @@ export const LinhaConfig = ({ item, quantidadeAdicionar, aoAlterarQuantidade, no
         placeholderTextColor="#999"
       />
 
-      {/* Botão para remover o produto inteiro do estoque (não é a mesma
-          coisa que zerar a quantidade — aqui a linha inteira some do banco). */}
       <TouchableOpacity
         style={stylesTabelas.botaoRemoverProduto}
         onPress={() => aoRemover(item.id, item.nome)}
@@ -444,7 +428,7 @@ export const stylesTabelas = StyleSheet.create({
     marginBottom: 4,
   },
 
-  // NOVO: estilo do campo de texto onde o usuário digita o novo preço
+  // estilo do campo de texto onde o usuário digita o novo preço
   // na tela de configuração de estoque.
   inputPreco: {
     flex: 1,
@@ -458,7 +442,7 @@ export const stylesTabelas = StyleSheet.create({
     marginLeft: 6,
   },
 
-  // NOVO: estilos do formulário "Adicionar novo produto", também na
+  // estilos do formulário "Adicionar novo produto", também na
   // tela de configuração de estoque.
   formNovoProduto: {
     width: '90%',
@@ -487,7 +471,7 @@ export const stylesTabelas = StyleSheet.create({
     marginBottom: 10,
   },
 
-  // NOVO: botão "✕" que remove o produto inteiro do estoque, e o espaço
+  // botão "✕" que remove o produto inteiro do estoque, e o espaço
   // reservado para ele no cabeçalho (pra as colunas continuarem alinhadas).
   botaoRemoverProduto: {
     width: 34,
@@ -503,7 +487,7 @@ export const stylesTabelas = StyleSheet.create({
     width: 42,
   },
 
-  // NOVO: estilos da seção "Calcular totais", na tela de configuração de estoque.
+  // estilos da seção "Calcular totais", na tela de configuração de estoque.
   linhaGrupoVenda: {
     flexDirection: 'row',
     justifyContent: 'space-between',
