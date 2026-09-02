@@ -181,6 +181,7 @@ export const CabecalhoConfig = () => (
     <Text style={stylesTabelas.celulaHeader}>
       Novo preço
     </Text>
+    <View style={stylesTabelas.espacadorBotaoRemover} />
   </View>
 );
 
@@ -193,7 +194,7 @@ export const CabecalhoConfig = () => (
 // - novoPreco: o texto que o usuário digitou no campo de preço (string,
 //   porque TextInput sempre trabalha com texto, não com número)
 // - aoAlterarPreco: função chamada a cada letra/número digitado no preço
-export const LinhaConfig = ({ item, quantidadeAdicionar, aoAlterarQuantidade, novoPreco, aoAlterarPreco }) => {
+export const LinhaConfig = ({ item, quantidadeAdicionar, aoAlterarQuantidade, novoPreco, aoAlterarPreco, aoRemover }) => {
   const ehCaldoDeCana = item.nome.toLowerCase().includes("caldo de cana");
 
   return (
@@ -239,6 +240,15 @@ export const LinhaConfig = ({ item, quantidadeAdicionar, aoAlterarQuantidade, no
         placeholder={`R$ ${item.lucro.toFixed(2)}`}
         placeholderTextColor="#999"
       />
+
+      {/* Botão para remover o produto inteiro do estoque (não é a mesma
+          coisa que zerar a quantidade — aqui a linha inteira some do banco). */}
+      <TouchableOpacity
+        style={stylesTabelas.botaoRemoverProduto}
+        onPress={() => aoRemover(item.id, item.nome)}
+      >
+        <Text style={stylesTabelas.textoBotaoSeletor}>✕</Text>
+      </TouchableOpacity>
     </View>
   );
 };
@@ -475,6 +485,43 @@ export const stylesTabelas = StyleSheet.create({
     paddingHorizontal: 10,
     fontSize: 14,
     marginBottom: 10,
+  },
+
+  // NOVO: botão "✕" que remove o produto inteiro do estoque, e o espaço
+  // reservado para ele no cabeçalho (pra as colunas continuarem alinhadas).
+  botaoRemoverProduto: {
+    width: 34,
+    height: 34,
+    borderRadius: 9,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#c62828',
+    marginLeft: 8,
+  },
+
+  espacadorBotaoRemover: {
+    width: 42,
+  },
+
+  // NOVO: estilos da seção "Calcular totais", na tela de configuração de estoque.
+  linhaGrupoVenda: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 6,
+    borderBottomWidth: 1,
+    borderColor: '#eee',
+  },
+
+  linhaCheckboxProduto: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 4,
+  },
+
+  textoCheckboxProduto: {
+    marginLeft: 8,
+    fontSize: 14,
   },
 
 });

@@ -9,11 +9,12 @@
 // Alert: componente usado para mostrar alertas na tela.
 // FlatList: componente usado para renderizar listas de dados de forma eficiente, renderizando apenas os itens visíveis na tela.
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View, FlatList, Button, ScrollView, TouchableOpacity, Alert, TextInput } from 'react-native';
+import { StyleSheet, Text, View, FlatList, Button, ScrollView, TouchableOpacity, Alert, TextInput, Platform } from 'react-native';
 import { SafeAreaProvider, SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useState, useEffect } from 'react';
 import { Cabecalho, Linha, CabecalhoConfig, LinhaConfig, dadosIniciais, stylesTabelas } from './src/tabelas/dados.js';
 import { supabase } from './src/supabase/supabaseClient.js';
+import CheckBox from 'expo-checkbox';
 
 // Toda a lógica e a tela do app moraram aqui dentro, na função
 // ConteudoApp. Ela deixou de ser "export default" porque agora
@@ -56,6 +57,15 @@ function ConteudoApp() {
   const [novoPreco, setNovoPreco] = useState('');
   const [adicionandoProduto, setAdicionandoProduto] = useState(false);
 
+  // NOVO: estados da seção "Calcular totais" (também na tela de
+  // configuração de estoque). gruposVenda é a lista já salva no Supabase
+  // (cada item é { id, nome, produtos_ids }). Os outros três são o
+  // "rascunho" do formulário para criar um total novo.
+  const [gruposVenda, setGruposVenda] = useState([]);
+  const [novoGrupoNome, setNovoGrupoNome] = useState('');
+  const [novoGrupoProdutosSelecionados, setNovoGrupoProdutosSelecionados] = useState([]);
+  const [salvandoGrupo, setSalvandoGrupo] = useState(false);
+
   // Busca o estoque no Supabase e coloca no estado "estoque".
   // Também usa esses mesmos dados para montar o "vendasDia" zerado,
   // já que antes isso era feito a partir de dadosIniciais.
@@ -85,16 +95,25 @@ function ConteudoApp() {
 
       setEstoque(estoqueFormatado);
 
-      // Só recria a lista de vendas do dia (zerada) se ainda não existir
-      // uma lista com o tamanho certo — evita apagar vendas já feitas
-      // quando buscarEstoque() é chamado de novo depois de salvar a
-      // configuração do estoque.
+      // Antes, essa parte só recriava "vendasDia" (zerado) quando o
+      // TAMANHO da lista mudava — mas isso zerava as vendas do dia inteiro
+      // sempre que um produto era adicionado OU removido, mesmo que os
+      // outros produtos já tivessem vendas registradas.
+      //
+      // Agora, em vez de comparar tamanhos, montamos "vendasDia" produto
+      // por produto: se o produto já tinha uma entrada de vendas, mantém
+      // a quantidade vendida que já existia; se é um produto novo (acabou
+      // de ser cadastrado), começa com 0; se um produto foi removido, ele
+      // simplesmente não entra mais na lista (porque estamos percorrendo
+      // "estoqueFormatado", que já não tem mais ele).
       setVendasDia(function (vendasAtual) {
-        if (vendasAtual.length === estoqueFormatado.length) {
-          return vendasAtual;
-        }
         return estoqueFormatado.map(function (item) {
-          return { id: item.id, nome: item.nome, quantidadeVendida: 0 };
+          const vendaExistente = vendasAtual.find(function (v) { return v.id === item.id; });
+          return {
+            id: item.id,
+            nome: item.nome,
+            quantidadeVendida: vendaExistente ? vendaExistente.quantidadeVendida : 0,
+          };
         });
       });
     }
@@ -102,9 +121,25 @@ function ConteudoApp() {
     setCarregandoEstoque(false);
   }
 
-  // Busca o estoque uma única vez, quando o app abre.
+  // NOVO: busca a lista de totais personalizados (grupos_venda) no
+  // Supabase, igual buscarEstoque faz com os produtos.
+  async function buscarGruposVenda() {
+    const { data, error } = await supabase
+      .from('grupos_venda')
+      .select('*')
+      .order('id', { ascending: true });
+
+    if (error) {
+      console.log('erro ao buscar totais personalizados: ', error.message);
+    } else {
+      setGruposVenda(data);
+    }
+  }
+
+  // Busca o estoque e os totais personalizados uma única vez, quando o app abre.
   useEffect(function () {
     buscarEstoque();
+    buscarGruposVenda();
   }, []);
 
   function alterarQuantidade(id, delta) {
@@ -277,13 +312,36 @@ function ConteudoApp() {
   }, 0);
 
   const totalVendasCaldoCana = vendasDia.filter(function (item) {
-    return item.nome.toLowerCase().includes("caldo de cana") || item.nome.toLowerCase().includes("refri");
+    return item.nome.toLowerCase().includes("caldo de cana");
   })
   .reduce(function (soma, item) {
     return soma + item.quantidadeVendida;
   }, 0);
 
-  const totalVendas = totalVendasPasteis + totalVendasCaldoCana;
+  // Antes: totalVendas = totalVendasPasteis + totalVendasCaldoCana.
+  // Isso deixava de fora qualquer produto novo que não fosse "pastel" nem
+  // "caldo de cana"/"refri" (ex: risoles). Agora soma TODAS as vendas do
+  // dia, não importa o nome do produto.
+  const totalVendas = vendasDia.reduce(function (soma, item) {
+    return soma + item.quantidadeVendida;
+  }, 0);
+
+  // NOVO: em vez de agrupar automaticamente por palavra, o usuário agora
+  // define manualmente, na tela de configuração de estoque, quais totais
+  // personalizados quer ver (ex: "Coxinha" somando dois produtos
+  // específicos). Esses grupos vêm do estado "gruposVenda" (buscado do
+  // Supabase) e o cálculo em si é feito logo abaixo, em "totaisPersonalizados".
+
+  // Para cada grupo salvo (ex: { nome: "Coxinha", produtos_ids: [13, 14] }),
+  // soma a quantidadeVendida de todos os produtos do dia cujo id esteja
+  // na lista produtos_ids desse grupo.
+  const totaisPersonalizados = gruposVenda.map(function (grupo) {
+    const quantidade = vendasDia
+      .filter(function (item) { return grupo.produtos_ids.includes(item.id); })
+      .reduce(function (soma, item) { return soma + item.quantidadeVendida; }, 0);
+
+    return { id: grupo.id, nome: grupo.nome, quantidade: quantidade };
+  });
 
   let total = 0;
   for (const item of estoque) {
@@ -508,6 +566,166 @@ function venderSelecionados() {
     Alert.alert('Produto adicionado', `"${nomeTratado}" foi adicionado ao estoque.`);
   }
 
+  // Remove um produto definitivamente do estoque (a linha inteira, não só
+  // a quantidade). Pede confirmação antes, porque não tem como desfazer.
+  //
+  // A confirmação precisa ser diferente dependendo da plataforma:
+  // - No Android/iOS de verdade, Alert.alert com dois botões (Cancelar/
+  //   Remover) funciona nativamente e é a forma correta.
+  // - No modo web (o que você está testando agora no navegador),
+  //   react-native-web não sabe desenhar essa caixa com múltiplos botões
+  //   — por isso o clique em "Remover" nunca disparava. Nesse caso usamos
+  //   window.confirm, que é o equivalente do próprio navegador.
+  function removerProduto(id, nome) {
+    if (Platform.OS === 'web') {
+      const confirmado = window.confirm(
+        `Tem certeza que deseja remover "${nome}" do estoque? Essa ação não pode ser desfeita.`
+      );
+      if (confirmado) {
+        executarRemocaoProduto(id);
+      }
+      return;
+    }
+
+    Alert.alert(
+      'Remover produto',
+      `Tem certeza que deseja remover "${nome}" do estoque? Essa ação não pode ser desfeita.`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Remover',
+          style: 'destructive',
+          onPress: function () {
+            executarRemocaoProduto(id);
+          },
+        },
+      ]
+    );
+  }
+
+  // A exclusão de verdade (chamada tanto pelo caminho nativo quanto pelo
+  // caminho web, depois que a pessoa já confirmou).
+  async function executarRemocaoProduto(id) {
+    const { error } = await supabase
+      .from('produtos')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      console.log('erro ao remover produto: ', error.message);
+      Alert.alert('Erro ao remover', error.message);
+      return;
+    }
+
+    // Limpa qualquer rascunho pendente desse produto nas telas que usam
+    // objetos indexados por id (senão ficaria um "lixo" no estado,
+    // referenciando um id que não existe mais no banco).
+    setQuantidadesReposicao(function (atual) {
+      const copia = { ...atual };
+      delete copia[id];
+      return copia;
+    });
+    setPrecosEditados(function (atual) {
+      const copia = { ...atual };
+      delete copia[id];
+      return copia;
+    });
+    setQuantidades(function (atual) {
+      const copia = { ...atual };
+      delete copia[id];
+      return copia;
+    });
+
+    await buscarEstoque();
+  }
+
+  // ==========================================================================
+  // NOVO: funções da seção "Calcular totais" (totais de venda personalizados).
+  // ==========================================================================
+
+  // Chamada ao marcar/desmarcar o checkbox de um produto no formulário de
+  // criar um novo total. Funciona como um "alternar": se o id já estava na
+  // lista, tira; se não estava, adiciona.
+  function alternarProdutoNoNovoGrupo(id) {
+    setNovoGrupoProdutosSelecionados(function (atual) {
+      if (atual.includes(id)) {
+        return atual.filter(function (itemId) { return itemId !== id; });
+      }
+      return [...atual, id];
+    });
+  }
+
+  // Salva um novo total personalizado no Supabase, com o nome digitado e
+  // os produtos marcados no formulário.
+  async function salvarNovoGrupoVenda() {
+    const nomeTratado = novoGrupoNome.trim();
+
+    if (nomeTratado === '') {
+      Alert.alert('Nome obrigatório', 'Digite um nome para esse total (ex: "Coxinha").');
+      return;
+    }
+
+    if (novoGrupoProdutosSelecionados.length === 0) {
+      Alert.alert('Selecione ao menos um produto', 'Marque pelo menos um produto do estoque para esse total.');
+      return;
+    }
+
+    setSalvandoGrupo(true);
+
+    const { error } = await supabase
+      .from('grupos_venda')
+      .insert({ nome: nomeTratado, produtos_ids: novoGrupoProdutosSelecionados });
+
+    if (error) {
+      console.log('erro ao salvar total personalizado: ', error.message);
+      Alert.alert('Erro ao salvar', error.message);
+      setSalvandoGrupo(false);
+      return;
+    }
+
+    await buscarGruposVenda();
+
+    setNovoGrupoNome('');
+    setNovoGrupoProdutosSelecionados([]);
+    setSalvandoGrupo(false);
+  }
+
+  // Remove um total personalizado. Importante: isso NÃO mexe no estoque
+  // nem nos produtos, só apaga a "regra" de agrupamento salva.
+  function removerGrupoVenda(id, nome) {
+    if (Platform.OS === 'web') {
+      const confirmado = window.confirm(`Remover o total "${nome}"? Isso não afeta o estoque, só o cálculo do total.`);
+      if (confirmado) {
+        executarRemocaoGrupoVenda(id);
+      }
+      return;
+    }
+
+    Alert.alert(
+      'Remover total',
+      `Remover o total "${nome}"? Isso não afeta o estoque, só o cálculo do total.`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        { text: 'Remover', style: 'destructive', onPress: function () { executarRemocaoGrupoVenda(id); } },
+      ]
+    );
+  }
+
+  async function executarRemocaoGrupoVenda(id) {
+    const { error } = await supabase
+      .from('grupos_venda')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      console.log('erro ao remover total personalizado: ', error.message);
+      Alert.alert('Erro ao remover', error.message);
+      return;
+    }
+
+    await buscarGruposVenda();
+  }
+
   return (
     <ScrollView contentContainerStyle={{ paddingBottom: insets.bottom + 24 }}>
       <SafeAreaView style={stylesTabelas.container}>
@@ -544,6 +762,17 @@ function venderSelecionados() {
               <Text style={stylesTabelas.textoRelatorio}> total vendas: {totalVendas} </Text>
               <Text style={stylesTabelas.textoRelatorio}> total vendas pasteis: {totalVendasPasteis} </Text>
               <Text style={stylesTabelas.textoRelatorio}> total vendas caldo de cana: {totalVendasCaldoCana} </Text>
+
+              {/* NOVO: um total de vendas para cada grupo que o usuário
+                  configurou na tela "Configurar estoque" > "Calcular totais". */}
+              {totaisPersonalizados.map(function (grupo) {
+                return (
+                  <Text key={grupo.id} style={stylesTabelas.textoRelatorio}>
+                    {' '}total de vendas {grupo.nome}: {grupo.quantidade}{' '}
+                  </Text>
+                );
+              })}
+
               <Text style={stylesTabelas.textoRelatorio}> lucro: R$ {lucro.toFixed(2)} </Text>
               
               <View style={stylesTabelas.tabelaContainer}>
@@ -607,6 +836,7 @@ function venderSelecionados() {
                       aoAlterarQuantidade={alterarQuantidadeReposicao}
                       novoPreco={precosEditados[objeto.item.id] !== undefined ? precosEditados[objeto.item.id] : ''}
                       aoAlterarPreco={alterarPrecoEditado}
+                      aoRemover={removerProduto}
                     />
                   );
                 }}
@@ -662,6 +892,71 @@ function venderSelecionados() {
               >
                 <Text style={stylesTabelas.textoBotao}>
                   {adicionandoProduto ? 'Adicionando...' : 'Adicionar produto'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* NOVO: seção "Calcular totais" — o usuário escolhe um nome
+                (ex: "Coxinha") e marca quais produtos do estoque entram
+                na soma desse total, que depois aparece no relatório de
+                vendas como "total de vendas <nome>: N". */}
+            <View style={stylesTabelas.formNovoProduto}>
+              <Text style={stylesTabelas.tituloFormNovoProduto}>Calcular totais</Text>
+              <Text style={stylesTabelas.textoRelatorio}>
+                Crie um total personalizado escolhendo um nome e quais produtos entram nele (ex: "Coxinha" somando "coxinha de frango" e "coxinha de carne").
+              </Text>
+
+              {/* Lista dos totais que já existem, com botão de remover cada um. */}
+              {gruposVenda.length === 0 && (
+                <Text style={stylesTabelas.textoRelatorio}>Nenhum total personalizado criado ainda.</Text>
+              )}
+
+              {gruposVenda.map(function (grupo) {
+                return (
+                  <View key={grupo.id} style={stylesTabelas.linhaGrupoVenda}>
+                    <Text style={stylesTabelas.textoRelatorio}>
+                      {grupo.nome} ({grupo.produtos_ids.length} produto{grupo.produtos_ids.length === 1 ? '' : 's'})
+                    </Text>
+                    <TouchableOpacity
+                      style={stylesTabelas.botaoRemoverProduto}
+                      onPress={() => removerGrupoVenda(grupo.id, grupo.nome)}
+                    >
+                      <Text style={stylesTabelas.textoBotaoSeletor}>✕</Text>
+                    </TouchableOpacity>
+                  </View>
+                );
+              })}
+
+              <Text style={[stylesTabelas.tituloFormNovoProduto, { marginTop: 16 }]}>Novo total</Text>
+
+              <TextInput
+                style={stylesTabelas.inputNovoProduto}
+                placeholder="Nome do total (ex: Coxinha)"
+                value={novoGrupoNome}
+                onChangeText={setNovoGrupoNome}
+              />
+
+              <Text style={stylesTabelas.textoRelatorio}>Marque os produtos que entram nesse total:</Text>
+
+              {estoque.map(function (item) {
+                return (
+                  <View key={item.id} style={stylesTabelas.linhaCheckboxProduto}>
+                    <CheckBox
+                      value={novoGrupoProdutosSelecionados.includes(item.id)}
+                      onValueChange={() => alternarProdutoNoNovoGrupo(item.id)}
+                    />
+                    <Text style={stylesTabelas.textoCheckboxProduto}>{item.nome}</Text>
+                  </View>
+                );
+              })}
+
+              <TouchableOpacity
+                style={[stylesTabelas.botao, salvandoGrupo && stylesTabelas.botaoDesabilitado]}
+                onPress={salvarNovoGrupoVenda}
+                disabled={salvandoGrupo}
+              >
+                <Text style={stylesTabelas.textoBotao}>
+                  {salvandoGrupo ? 'Salvando...' : 'Salvar total'}
                 </Text>
               </TouchableOpacity>
             </View>
