@@ -9,9 +9,6 @@ import { TelaConfigurarEstoque } from './src/telas/TelaConfigurarEstoque.js';
 import { TelaRegistros } from './src/telas/TelaRegistros.js';
 
 function ConteudoApp() {
-<<<<<<< HEAD
-  const insets = useSafeAreaInsets();
-=======
 
   const insets = useSafeAreaInsets();
 
@@ -21,12 +18,9 @@ function ConteudoApp() {
   const [lucro, setLucro] = useState(0);
   const [carregandoEstoque, setCarregandoEstoque] = useState(true);
 
->>>>>>> 5ed3554a26f56aafaa8ac725f43d9f98f3752a87
   const [tela, setTela] = useState('principal');
 
-<<<<<<< HEAD
   const app = useAppState(tela);
-=======
   const [quantidadesReposicao, setQuantidadesReposicao] = useState({});
 
   const [precosEditados, setPrecosEditados] = useState({});
@@ -609,14 +603,12 @@ function venderSelecionados() {
 
     await buscarGruposVenda();
   }
->>>>>>> 5ed3554a26f56aafaa8ac725f43d9f98f3752a87
 
   return (
     <ScrollView contentContainerStyle={{ paddingBottom: insets.bottom + 24 }}>
       <SafeAreaView style={stylesTabelas.container}>
 
         {tela === 'principal' && (
-<<<<<<< HEAD
           <TelaPrincipal
             estoque={app.estoque}
             vendasDia={app.vendasDia}
@@ -664,7 +656,7 @@ function venderSelecionados() {
             removerGrupoVenda={app.removerGrupoVenda}
             voltar={function () { setTela('principal'); }}
           />
-=======
+        )}
           <>
             <View style={stylesTabelas.relatorio}>
               <Text style={stylesTabelas.tituloRelatorio}>Relatório de Estoque</Text>
@@ -744,7 +736,6 @@ function venderSelecionados() {
               </TouchableOpacity>
             </View>
           </>
-        )}
 
         {tela === 'configurarEstoque' && (
           <View style={stylesTabelas.relatorio}>
@@ -887,7 +878,6 @@ function venderSelecionados() {
               </TouchableOpacity>
             </View>
           </View>
->>>>>>> 5ed3554a26f56aafaa8ac725f43d9f98f3752a87
         )}
 
         {tela === 'registros' && (
