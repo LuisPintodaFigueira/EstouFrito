@@ -1,5 +1,3 @@
-// arquivo dedicado a estilização e estrutura das tabelas.
-
 import { View, Text, StyleSheet, SafeAreaView, Button, onPress, TouchableOpacity, TextInput } from 'react-native';
 import CheckBox from 'expo-checkbox';
 
@@ -45,146 +43,175 @@ export const dadosIniciais = [
 
 ];
 
-// estrutura padrão para cada linha das tabelas renderizdas, ademais funções de seleção e alteração de quantidade.
-export const Linha = ({ item, aoSelecionar, selecionado, quantidade, aoAlterarQuantidade, tabelaEstoque }) => (
+export function Linha({ item, aoSelecionar, selecionado, quantidade, aoAlterarQuantidade, tabelaEstoque }) {
+  let quantidadeExibida;
+  if (item.quantidade !== undefined) {
+    if (item.nome.toLowerCase().includes("caldo de cana")) {
+      quantidadeExibida = '∞';
+    } else {
+      quantidadeExibida = item.quantidade;
+    }
+  } else {
+    quantidadeExibida = item.quantidadeVendida;
+  }
 
-  // componente View com estilo condicional, se for tabela de estoque aplica o estilo de linhaEstoque.
-  <View style={[stylesTabelas.linha, tabelaEstoque && stylesTabelas.linhaEstoque]}>
-    <Text style={[
+  let lucroExibido;
+  if (item.lucro !== undefined) {
+    lucroExibido = `R$ ${item.lucro.toFixed(2)}`;
+  } else {
+    lucroExibido = null;
+  }
 
-      // estilos aplicados a cada célula da linha, dependendo se é tabela de estoque ou não.
-      stylesTabelas.celulaHeader,
-      tabelaEstoque && stylesTabelas.colNome,
-      tabelaEstoque && stylesTabelas.celulaComBorda,
-      tabelaEstoque && stylesTabelas.nomeProdutoTexto,
-    ]}>
-    
-      {item.nome}
-    </Text>
+  return (
+    <View style={[stylesTabelas.linha, tabelaEstoque && stylesTabelas.linhaEstoque]}>
+      <Text style={[
+        stylesTabelas.celulaHeader,
+        tabelaEstoque && stylesTabelas.colNome,
+        tabelaEstoque && stylesTabelas.celulaComBorda,
+        tabelaEstoque && stylesTabelas.nomeProdutoTexto,
+      ]}>
+        {item.nome}
+      </Text>
 
-    <Text style={[
-      stylesTabelas.celulaHeader,
-      tabelaEstoque && stylesTabelas.colQuantidade,
-      tabelaEstoque && stylesTabelas.celulaComBorda,
-    ]}>
+      <Text style={[
+        stylesTabelas.celulaHeader,
+        tabelaEstoque && stylesTabelas.colQuantidade,
+        tabelaEstoque && stylesTabelas.celulaComBorda,
+      ]}>
+        {quantidadeExibida}
+      </Text>
 
-      {item.quantidade !== undefined
-        ? (item.nome.toLowerCase().includes("caldo de cana") ? '∞' : item.quantidade)
-        : item.quantidadeVendida}
-    </Text>
+      <Text style={[
+        stylesTabelas.celulaHeader,
+        tabelaEstoque && stylesTabelas.colLucro,
+        tabelaEstoque && stylesTabelas.celulaComBorda,
+      ]}>
+        {lucroExibido}
+      </Text>
 
-    <Text style={[
-      stylesTabelas.celulaHeader,
-      tabelaEstoque && stylesTabelas.colLucro,
-      tabelaEstoque && stylesTabelas.celulaComBorda,
-    ]}>
+      {aoAlterarQuantidade && (
+        <View style={stylesTabelas.seletor}>
+          <TouchableOpacity
+            style={[stylesTabelas.botaoSeletor, stylesTabelas.botaoSeletorMenos]}
+            onPress={function () { aoAlterarQuantidade(item.id, -1); }}
+          >
+            <Text style={stylesTabelas.textoBotaoSeletor}>-</Text>
+          </TouchableOpacity>
 
-      {item.lucro !== undefined ? `R$ ${item.lucro.toFixed(2)}` : null}
-    </Text>
+          <Text style={stylesTabelas.valorSeletor}>{quantidade}</Text>
 
-    {aoAlterarQuantidade && (
+          <TouchableOpacity
+            style={[stylesTabelas.botaoSeletor, stylesTabelas.botaoSeletorMais]}
+            onPress={function () { aoAlterarQuantidade(item.id, 1); }}
+          >
+            <Text style={stylesTabelas.textoBotaoSeletor}>+</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {aoSelecionar && (
+        <CheckBox
+          value={selecionado}
+          onValueChange={function () { aoSelecionar(item.id); }}
+        />
+      )}
+    </View>
+  );
+}
+
+export function Cabecalho({ tabelaEstoque }) {
+  return (
+    <View style={[stylesTabelas.linha, stylesTabelas.cabecalho]}>
+      <Text
+        style={[
+          stylesTabelas.celulaHeader,
+          tabelaEstoque && stylesTabelas.colNome,
+          tabelaEstoque && stylesTabelas.celulaComBorda,
+        ]}
+      >
+        Nome
+      </Text>
+
+      <Text
+        style={[
+          stylesTabelas.celulaHeader,
+          tabelaEstoque && stylesTabelas.colQuantidade,
+          tabelaEstoque && stylesTabelas.celulaComBorda,
+        ]}
+      >
+        Quantidade
+      </Text>
+
+      <Text
+        style={[
+          stylesTabelas.celulaHeader,
+          tabelaEstoque && stylesTabelas.colLucro,
+        ]}
+      >
+        Lucro
+      </Text>
+
+      {tabelaEstoque && (
+        <View style={stylesTabelas.espacadorSeletor} />
+      )}
+    </View>
+  );
+}
+
+export function CabecalhoConfig() {
+  return (
+    <View style={[stylesTabelas.linha, stylesTabelas.cabecalho]}>
+      <Text style={[stylesTabelas.celulaHeader, stylesTabelas.colNome, stylesTabelas.celulaComBorda]}>
+        Nome
+      </Text>
+      <Text style={[stylesTabelas.celulaHeader, stylesTabelas.colQuantidade, stylesTabelas.celulaComBorda]}>
+        Estoque
+      </Text>
+      <Text style={[stylesTabelas.celulaHeader, stylesTabelas.celulaComBorda, stylesTabelas.espacadorSeletor]}>
+        Adicionar
+      </Text>
+      <Text style={stylesTabelas.celulaHeader}>
+        Novo preço
+      </Text>
+      <View style={stylesTabelas.espacadorBotaoRemover} />
+    </View>
+  );
+}
+
+export function LinhaConfig({ item, quantidadeAdicionar, aoAlterarQuantidade, novoPreco, aoAlterarPreco, aoRemover }) {
+  const ehCaldoDeCana = item.nome.toLowerCase().includes("caldo de cana");
+
+  let quantidadeExibida;
+  if (ehCaldoDeCana) {
+    quantidadeExibida = '∞';
+  } else {
+    quantidadeExibida = item.quantidade;
+  }
+
+  let seletorOuTraco;
+  if (ehCaldoDeCana) {
+    seletorOuTraco = <Text style={[stylesTabelas.celulaHeader, stylesTabelas.espacadorSeletor]}>—</Text>;
+  } else {
+    seletorOuTraco = (
       <View style={stylesTabelas.seletor}>
         <TouchableOpacity
           style={[stylesTabelas.botaoSeletor, stylesTabelas.botaoSeletorMenos]}
-
-          // ao pressionar o botão de menos, chama a função aoAlterarQuantidade passando o id do item e -1 para diminuir a quantidade.
-          onPress={() => aoAlterarQuantidade(item.id, -1)}
+          onPress={function () { aoAlterarQuantidade(item.id, -1); }}
         >
           <Text style={stylesTabelas.textoBotaoSeletor}>-</Text>
         </TouchableOpacity>
 
-        <Text style={stylesTabelas.valorSeletor}>{quantidade}</Text>
+        <Text style={stylesTabelas.valorSeletor}>{quantidadeAdicionar}</Text>
 
         <TouchableOpacity
           style={[stylesTabelas.botaoSeletor, stylesTabelas.botaoSeletorMais]}
-
-          // ao pressionar o botão de mais, chama a função aoAlterarQuantidade passando o id do item e 1 para aumentar a quantidade.
-          onPress={() => aoAlterarQuantidade(item.id, 1)}
+          onPress={function () { aoAlterarQuantidade(item.id, 1); }}
         >
           <Text style={stylesTabelas.textoBotaoSeletor}>+</Text>
         </TouchableOpacity>
       </View>
-    )}
-    
-    {aoSelecionar && (
-      <CheckBox
-        value={selecionado}
-        onValueChange={() => aoSelecionar(item.id)}
-      />
-    )}
-  </View>
-);
-
-export const Cabecalho = ({ tabelaEstoque }) => (
-  <View style={[stylesTabelas.linha, stylesTabelas.cabecalho]}>
-
-    <Text
-      style={[
-        stylesTabelas.celulaHeader,
-        tabelaEstoque && stylesTabelas.colNome,
-        tabelaEstoque && stylesTabelas.celulaComBorda,
-      ]}
-    >
-      Nome
-    </Text>
-
-    <Text
-      style={[
-        stylesTabelas.celulaHeader,
-        tabelaEstoque && stylesTabelas.colQuantidade,
-        tabelaEstoque && stylesTabelas.celulaComBorda,
-      ]}
-    >
-      Quantidade
-    </Text>
-    
-
-    <Text
-      style={[
-        stylesTabelas.celulaHeader,
-        tabelaEstoque && stylesTabelas.colLucro,
-      ]}
-    >
-      Lucro
-    </Text>
-    
-    {tabelaEstoque && (
-      <View style={stylesTabelas.espacadorSeletor} />
-    )}
-  </View>
-);
-
-// Cabeçalho da tabela de configuração. Tem 4 colunas: Nome, Estoque atual,
-// Adicionar (o seletor +/-) e Novo preço (o campo de texto).
-export const CabecalhoConfig = () => (
-  <View style={[stylesTabelas.linha, stylesTabelas.cabecalho]}>
-    <Text style={[stylesTabelas.celulaHeader, stylesTabelas.colNome, stylesTabelas.celulaComBorda]}>
-      Nome
-    </Text>
-    <Text style={[stylesTabelas.celulaHeader, stylesTabelas.colQuantidade, stylesTabelas.celulaComBorda]}>
-      Estoque
-    </Text>
-    <Text style={[stylesTabelas.celulaHeader, stylesTabelas.celulaComBorda, stylesTabelas.espacadorSeletor]}>
-      Adicionar
-    </Text>
-    <Text style={stylesTabelas.celulaHeader}>
-      Novo preço
-    </Text>
-    <View style={stylesTabelas.espacadorBotaoRemover} />
-  </View>
-);
-
-// Linha da tabela de configuração.
-// Props:
-// - item: o produto (vindo do estado "estoque" do App.js)
-// - quantidadeAdicionar: quanto o usuário já escolheu adicionar para esse
-//   produto (fica guardado no App.js até apertar "Salvar")
-// - aoAlterarQuantidade: função chamada quando aperta + ou -
-// - novoPreco: o texto que o usuário digitou no campo de preço (string,
-//   porque TextInput sempre trabalha com texto, não com número)
-// - aoAlterarPreco: função chamada a cada letra/número digitado no preço
-export const LinhaConfig = ({ item, quantidadeAdicionar, aoAlterarQuantidade, novoPreco, aoAlterarPreco, aoRemover }) => {
-  const ehCaldoDeCana = item.nome.toLowerCase().includes("caldo de cana");
+    );
+  }
 
   return (
     <View style={[stylesTabelas.linha, stylesTabelas.linhaEstoque]}>
@@ -193,56 +220,34 @@ export const LinhaConfig = ({ item, quantidadeAdicionar, aoAlterarQuantidade, no
       </Text>
 
       <Text style={[stylesTabelas.celulaHeader, stylesTabelas.colQuantidade, stylesTabelas.celulaComBorda]}>
-        {ehCaldoDeCana ? '∞' : item.quantidade}
+        {quantidadeExibida}
       </Text>
 
-      {ehCaldoDeCana ? (
-        <Text style={[stylesTabelas.celulaHeader, stylesTabelas.espacadorSeletor]}>—</Text>
-      ) : (
-        <View style={stylesTabelas.seletor}>
-          <TouchableOpacity
-            style={[stylesTabelas.botaoSeletor, stylesTabelas.botaoSeletorMenos]}
-            onPress={() => aoAlterarQuantidade(item.id, -1)}
-          >
-            <Text style={stylesTabelas.textoBotaoSeletor}>-</Text>
-          </TouchableOpacity>
-
-          <Text style={stylesTabelas.valorSeletor}>{quantidadeAdicionar}</Text>
-
-          <TouchableOpacity
-            style={[stylesTabelas.botaoSeletor, stylesTabelas.botaoSeletorMais]}
-            onPress={() => aoAlterarQuantidade(item.id, 1)}
-          >
-            <Text style={stylesTabelas.textoBotaoSeletor}>+</Text>
-          </TouchableOpacity>
-        </View>
-      )}
+      {seletorOuTraco}
 
       <TextInput
         style={stylesTabelas.inputPreco}
         keyboardType="decimal-pad"
         value={novoPreco}
-        onChangeText={(texto) => aoAlterarPreco(item.id, texto)}
+        onChangeText={function (texto) { aoAlterarPreco(item.id, texto); }}
         placeholder={`R$ ${item.lucro.toFixed(2)}`}
         placeholderTextColor="#999"
       />
 
       <TouchableOpacity
         style={stylesTabelas.botaoRemoverProduto}
-        onPress={() => aoRemover(item.id, item.nome)}
+        onPress={function () { aoRemover(item.id, item.nome); }}
       >
         <Text style={stylesTabelas.textoBotaoSeletor}>✕</Text>
       </TouchableOpacity>
     </View>
   );
-};
+}
 
 export const stylesTabelas = StyleSheet.create({
 
   seletor: {
-    // estilo do seletor de quantidade, com flexDirection row para alinhar os botões e o valor horizontalmente, e alinhamento centralizado.
     flexDirection: 'row',
-    // alinhamento centralizado dos itens e justificação centralizada.
     alignItems: 'center',
     justifyContent: 'center',
     width: 100,
@@ -314,7 +319,7 @@ export const stylesTabelas = StyleSheet.create({
     marginTop: 16,
     marginBottom: 10,
   },
-  
+
   container: {
     flex: 1,
     padding: 10,
@@ -377,16 +382,16 @@ export const stylesTabelas = StyleSheet.create({
     fontWeight: 'bold',
   },
 
-  colId: { 
-    width: 22, 
-    fontSize: 13, 
+  colId: {
+    width: 22,
+    fontSize: 13,
   },
 
-  colNome: { 
-    flex: 1, 
-    textAlign: 'left', 
-    paddingLeft: 6, 
-    fontSize: 13, 
+  colNome: {
+    flex: 1,
+    textAlign: 'left',
+    paddingLeft: 6,
+    fontSize: 13,
   },
 
   nomeProdutoTexto: {
@@ -395,14 +400,14 @@ export const stylesTabelas = StyleSheet.create({
     color: '#1a1a1a',
   },
 
-  colQuantidade: { 
-    width: 30, 
-    fontSize: 13, 
+  colQuantidade: {
+    width: 30,
+    fontSize: 13,
   },
 
-  colLucro: { 
-    width: 58, 
-    fontSize: 13, 
+  colLucro: {
+    width: 58,
+    fontSize: 13,
   },
 
   celulaComBorda: {
@@ -410,8 +415,8 @@ export const stylesTabelas = StyleSheet.create({
     borderRightColor: '#ddd',
   },
 
-  espacadorSeletor: { 
-    width: 100, 
+  espacadorSeletor: {
+    width: 100,
   },
 
   cardRegistro: {
@@ -428,8 +433,6 @@ export const stylesTabelas = StyleSheet.create({
     marginBottom: 4,
   },
 
-  // estilo do campo de texto onde o usuário digita o novo preço
-  // na tela de configuração de estoque.
   inputPreco: {
     flex: 1,
     borderWidth: 1,
@@ -442,8 +445,6 @@ export const stylesTabelas = StyleSheet.create({
     marginLeft: 6,
   },
 
-  // estilos do formulário "Adicionar novo produto", também na
-  // tela de configuração de estoque.
   formNovoProduto: {
     width: '90%',
     alignSelf: 'center',
@@ -471,8 +472,6 @@ export const stylesTabelas = StyleSheet.create({
     marginBottom: 10,
   },
 
-  // botão "✕" que remove o produto inteiro do estoque, e o espaço
-  // reservado para ele no cabeçalho (pra as colunas continuarem alinhadas).
   botaoRemoverProduto: {
     width: 34,
     height: 34,
@@ -487,7 +486,6 @@ export const stylesTabelas = StyleSheet.create({
     width: 42,
   },
 
-  // estilos da seção "Calcular totais", na tela de configuração de estoque.
   linhaGrupoVenda: {
     flexDirection: 'row',
     justifyContent: 'space-between',
