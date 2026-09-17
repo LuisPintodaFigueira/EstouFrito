@@ -1,6 +1,6 @@
 import { ScrollView } from 'react-native';
 import { SafeAreaProvider, SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 import { stylesTabelas } from './src/tabelas/dados.js';
 import { useAppState } from './src/hooks/useAppState.js';
