@@ -82,20 +82,6 @@ export function TelaConfigurarEstoque({
         />
       </View>
 
-      <View style={stylesTabelas.linhaBotoesRodape}>
-        <TouchableOpacity
-          style={[stylesTabelas.botao, salvandoEstoque && stylesTabelas.botaoDesabilitado]}
-          onPress={salvarConfiguracaoEstoque}
-          disabled={salvandoEstoque}
-        >
-          <Text style={stylesTabelas.textoBotao}>{textoBotaoSalvarEstoque}</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={stylesTabelas.botao} onPress={voltar}>
-          <Text style={stylesTabelas.textoBotao}> Voltar </Text>
-        </TouchableOpacity>
-      </View>
-
       <View style={stylesTabelas.formNovoProduto}>
         <Text style={stylesTabelas.tituloFormNovoProduto}>Adicionar novo produto</Text>
 
@@ -198,6 +184,21 @@ export function TelaConfigurarEstoque({
           </Text>
         </TouchableOpacity>
       </View>
+
+      <View style={stylesTabelas.linhaBotoesRodape}>
+        <TouchableOpacity
+          style={[stylesTabelas.botao, salvandoEstoque && stylesTabelas.botaoDesabilitado]}
+          onPress={salvarConfiguracaoEstoque}
+          disabled={salvandoEstoque}
+        >
+          <Text style={stylesTabelas.textoBotao}>{textoBotaoSalvarEstoque}</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={stylesTabelas.botao} onPress={voltar}>
+          <Text style={stylesTabelas.textoBotao}> Voltar </Text>
+        </TouchableOpacity>
+      </View>
+
     </View>
   );
 }
