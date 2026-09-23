@@ -1,5 +1,10 @@
-import { View, Text, StyleSheet, SafeAreaView, Button, onPress, TouchableOpacity, TextInput } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, Button, onPress, TouchableOpacity, TextInput, Dimensions } from 'react-native';
 import CheckBox from 'expo-checkbox';
+
+// Largura da tela do celular (limitada a 430 para não ficar gigante em tablet ou navegador)
+const larguraTela = Math.min(Dimensions.get('window').width, 430);
+// Largura de TODAS as tabelas: a tela inteira, com 2px de folga de cada lado
+const larguraTabela = larguraTela - 4;
 
 export const dadosIniciais = [
   {
@@ -69,6 +74,7 @@ export function Linha({ item, aoSelecionar, selecionado, quantidade, aoAlterarQu
         tabelaEstoque && stylesTabelas.colNome,
         tabelaEstoque && stylesTabelas.celulaComBorda,
         tabelaEstoque && stylesTabelas.nomeProdutoTexto,
+        !tabelaEstoque && stylesTabelas.colNomeVendas,
       ]}>
         {item.nome}
       </Text>
@@ -127,6 +133,8 @@ export function Cabecalho({ tabelaEstoque }) {
           stylesTabelas.celulaHeader,
           tabelaEstoque && stylesTabelas.colNome,
           tabelaEstoque && stylesTabelas.celulaComBorda,
+          !tabelaEstoque && stylesTabelas.colNomeVendas,
+          stylesTabelas.textoCabecalho,
         ]}
       >
         Nome
@@ -137,6 +145,7 @@ export function Cabecalho({ tabelaEstoque }) {
           stylesTabelas.celulaHeader,
           tabelaEstoque && stylesTabelas.colQuantidade,
           tabelaEstoque && stylesTabelas.celulaComBorda,
+          stylesTabelas.textoCabecalho,
         ]}
       >
         Quantidade
@@ -146,6 +155,7 @@ export function Cabecalho({ tabelaEstoque }) {
         style={[
           stylesTabelas.celulaHeader,
           tabelaEstoque && stylesTabelas.colLucro,
+          stylesTabelas.textoCabecalho,
         ]}
       >
         Lucro
@@ -161,16 +171,16 @@ export function Cabecalho({ tabelaEstoque }) {
 export function CabecalhoConfig() {
   return (
     <View style={[stylesTabelas.linha, stylesTabelas.cabecalho]}>
-      <Text style={[stylesTabelas.celulaHeader, stylesTabelas.colNome, stylesTabelas.celulaComBorda]}>
+      <Text style={[stylesTabelas.celulaHeader, stylesTabelas.colNome, stylesTabelas.celulaComBorda, stylesTabelas.textoCabecalho]}>
         Nome
       </Text>
-      <Text style={[stylesTabelas.celulaHeader, stylesTabelas.colQuantidade, stylesTabelas.celulaComBorda]}>
+      <Text style={[stylesTabelas.celulaHeader, stylesTabelas.colEstoqueConfig, stylesTabelas.celulaComBorda, stylesTabelas.textoCabecalho]}>
         Estoque
       </Text>
-      <Text style={[stylesTabelas.celulaHeader, stylesTabelas.celulaComBorda, stylesTabelas.espacadorSeletor]}>
+      <Text style={[stylesTabelas.celulaHeader, stylesTabelas.celulaComBorda, stylesTabelas.espacadorSeletor, stylesTabelas.textoCabecalho]}>
         Adicionar
       </Text>
-      <Text style={stylesTabelas.celulaHeader}>
+      <Text style={[stylesTabelas.celulaHeader, stylesTabelas.colPrecoConfig, stylesTabelas.textoCabecalho]}>
         Novo preço
       </Text>
       <View style={stylesTabelas.espacadorBotaoRemover} />
@@ -215,11 +225,11 @@ export function LinhaConfig({ item, quantidadeAdicionar, aoAlterarQuantidade, no
 
   return (
     <View style={[stylesTabelas.linha, stylesTabelas.linhaEstoque]}>
-      <Text style={[stylesTabelas.celulaHeader, stylesTabelas.colNome, stylesTabelas.celulaComBorda, stylesTabelas.nomeProdutoTexto]}>
+      <Text style={[stylesTabelas.celulaHeader, stylesTabelas.colNome, stylesTabelas.celulaComBorda, stylesTabelas.nomeProdutoTexto, stylesTabelas.nomeProdutoTextoConfig]}>
         {item.nome}
       </Text>
 
-      <Text style={[stylesTabelas.celulaHeader, stylesTabelas.colQuantidade, stylesTabelas.celulaComBorda]}>
+      <Text style={[stylesTabelas.celulaHeader, stylesTabelas.colEstoqueConfig, stylesTabelas.celulaComBorda]}>
         {quantidadeExibida}
       </Text>
 
@@ -235,7 +245,7 @@ export function LinhaConfig({ item, quantidadeAdicionar, aoAlterarQuantidade, no
       />
 
       <TouchableOpacity
-        style={stylesTabelas.botaoRemoverProduto}
+        style={stylesTabelas.botaoRemoverTabela}
         onPress={function () { aoRemover(item.id, item.nome); }}
       >
         <Text style={stylesTabelas.textoBotaoSeletor}>✕</Text>
@@ -254,8 +264,8 @@ export const stylesTabelas = StyleSheet.create({
   },
 
   botaoSeletor: {
-    width: 34,
-    height: 34,
+    width: 36,
+    height: 36,
     borderRadius: 9,
     alignItems: 'center',
     justifyContent: 'center',
@@ -276,9 +286,9 @@ export const stylesTabelas = StyleSheet.create({
   },
 
   valorSeletor: {
-    marginHorizontal: 6,
-    fontSize: 15,
-    minWidth: 18,
+    marginHorizontal: 3,
+    fontSize: 17,
+    minWidth: 22,
     textAlign: 'center',
     fontWeight: '600',
   },
@@ -346,7 +356,7 @@ export const stylesTabelas = StyleSheet.create({
   },
 
   tabelaContainer: {
-    width: '90%',
+    width: larguraTabela,
     alignSelf: 'center',
     borderWidth: 1,
     borderColor: '#ddd',
@@ -357,11 +367,11 @@ export const stylesTabelas = StyleSheet.create({
     flexDirection: 'row',
     borderBottomWidth: 1,
     borderColor: '#ccc',
-    paddingVertical: 8,
+    paddingVertical: 12,
   },
 
   linhaEstoque: {
-    paddingVertical: 10,
+    paddingVertical: 14,
     alignItems: 'center',
   },
 
@@ -380,6 +390,7 @@ export const stylesTabelas = StyleSheet.create({
     flex: 1,
     textAlign: 'center',
     fontWeight: 'bold',
+    fontSize: 16,
   },
 
   colId: {
@@ -390,24 +401,61 @@ export const stylesTabelas = StyleSheet.create({
   colNome: {
     flex: 1,
     textAlign: 'left',
-    paddingLeft: 6,
-    fontSize: 13,
+    paddingLeft: 4,
+    fontSize: 14,
   },
 
   nomeProdutoTexto: {
-    fontSize: 15,
+    fontSize: 17,
     fontWeight: '700',
     color: '#1a1a1a',
   },
 
   colQuantidade: {
-    width: 30,
-    fontSize: 13,
+    flex: 0,
+    width: 80,
+    fontSize: 17,
   },
 
   colLucro: {
-    width: 58,
-    fontSize: 13,
+    flex: 0,
+    width: 68,
+    fontSize: 15,
+  },
+
+  // --- estilos novos, usados só dentro das tabelas ---
+
+  colNomeVendas: {
+    flex: 2,
+  },
+
+  textoCabecalho: {
+    fontSize: 14,
+  },
+
+  nomeProdutoTextoConfig: {
+    fontSize: 15,
+  },
+
+  colEstoqueConfig: {
+    flex: 0,
+    width: 56,
+    fontSize: 16,
+  },
+
+  colPrecoConfig: {
+    flex: 0,
+    width: 68,
+  },
+
+  botaoRemoverTabela: {
+    width: 36,
+    height: 36,
+    borderRadius: 9,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#c62828',
+    marginLeft: 4,
   },
 
   celulaComBorda: {
@@ -416,6 +464,7 @@ export const stylesTabelas = StyleSheet.create({
   },
 
   espacadorSeletor: {
+    flex: 0,
     width: 100,
   },
 
@@ -434,15 +483,15 @@ export const stylesTabelas = StyleSheet.create({
   },
 
   inputPreco: {
-    flex: 1,
+    width: 64,
     borderWidth: 1,
     borderColor: '#ccc',
     borderRadius: 6,
-    paddingVertical: 4,
-    paddingHorizontal: 8,
-    fontSize: 13,
+    paddingVertical: 8,
+    paddingHorizontal: 2,
+    fontSize: 14,
     textAlign: 'center',
-    marginLeft: 6,
+    marginLeft: 4,
   },
 
   formNovoProduto: {
@@ -483,7 +532,7 @@ export const stylesTabelas = StyleSheet.create({
   },
 
   espacadorBotaoRemover: {
-    width: 42,
+    width: 40,
   },
 
   linhaGrupoVenda: {
